@@ -1,0 +1,50 @@
+name: Continuous Integration
+
+on:
+  push:
+  pull_request:
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.config.name }} | ${{ matrix.config.build_type }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - name: Linux GCC 9
+          os: ubuntu-22.04
+          extra_options: -DCMAKE_C_COMPILER=gcc-9 -DCMAKE_CXX_COMPILER=g++-9
+          deps_cmdline: sudo apt update && sudo apt install libsdl2-dev libvpx-dev libgtk2.0-dev libwebp-dev
+          build_type: Release
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+        submodules: true
+        path: ''
+    - run: git fetch --deepen=100
+
+    - name: Build
+      shell: bash
+      run: |
+        export MAKEFLAGS=--keep-going
+        make -j4
+
+    - name: Upload Package
+      uses: actions/upload-artifact@v3
+      with:
+        path: ${{ github.workspace }}/dosbox_pure_libretro.so
+        name: ${{ matrix.config.name }} ${{ matrix.config.build_type }}
+
+    # - name: List Build Directory
+    #   if: always()
+    #   shell: bash
+    #   run: |
+    #     git status
+    #     ls -lR
