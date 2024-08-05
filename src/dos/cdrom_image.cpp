@@ -101,7 +101,19 @@ CDROM_Interface_Image::BinaryFile::~BinaryFile()
 
 bool CDROM_Interface_Image::BinaryFile::read(Bit8u *buffer, int seek, int count)
 {
-	file->seekg(seek, ios::beg);
+	const auto pos = static_cast<std::streamoff>(seek);
+	if (file->tellg() == pos)
+		return true;
+
+	file->seekg(pos, std::ios::beg);
+
+	// If the first seek attempt failed, then try harder
+	if (file->fail()) {
+		file->clear();                   // clear fail and eof bits
+		file->seekg(0, std::ios::beg);   // "I have returned."
+		file->seekg(pos, std::ios::beg); // "It will be done."
+	}
+
 	file->read((char*)buffer, count);
 	return !(file->fail());
 }
